@@ -1,17 +1,28 @@
-import openai
 import os
+import google.generativeai as genai
 from typing import List, Dict
 
 class CognoxLLMService:
     """
-    Serviço para interagir com a API da OpenAI e gerar respostas inteligentes.
+    Serviço para interagir com a API do Google Gemini e gerar respostas inteligentes.
     """
     def __init__(self):
-        # Carrega a chave da API a partir das variáveis de ambiente
-        self.api_key = os.getenv("OPENAI_API_KEY")
+        # Carrega a chave da API do Google a partir das variáveis de ambiente
+        self.api_key = os.getenv("GOOGLE_API_KEY")
         if not self.api_key:
-            raise ValueError("A variável de ambiente OPENAI_API_KEY não foi definida.")
-        openai.api_key = self.api_key
+            raise ValueError("A variável de ambiente GOOGLE_API_KEY não foi definida.")
+        
+        genai.configure(api_key=self.api_key)
+        
+        # Configurações de segurança para evitar bloqueios desnecessários
+        self.safety_settings = [
+            {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+            {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+            {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+            {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
+        ]
+        
+        self.model = genai.GenerativeModel('gemini-1.5-flash-latest')
 
     def get_system_prompt(self) -> str:
         """
@@ -29,25 +40,31 @@ class CognoxLLMService:
 
     def process_message(self, user_message: str, history: List[Dict[str, str]]) -> str:
         """
-        Processa a mensagem do usuário, consulta a IA e retorna a resposta.
+        Processa a mensagem do usuário, consulta o Gemini e retorna a resposta.
         """
-        messages = [{"role": "system", "content": self.get_system_prompt()}]
-        messages.extend(history)
-        messages.append({"role": "user", "content": user_message})
+        # O Gemini usa um formato de histórico um pouco diferente
+        gemini_history = []
+        for item in history:
+            # O Gemini usa 'model' para o assistente e 'user' para o usuário
+            role = 'model' if item['role'] == 'assistant' else 'user'
+            gemini_history.append({'role': role, 'parts': [{'text': item['content']}]})
 
         try:
-            response = openai.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=messages,
-                temperature=0.7,
-                max_tokens=150
+            # Inicia uma nova sessão de chat com o histórico e a instrução do sistema
+            chat_session = self.model.start_chat(
+                history=gemini_history,
             )
-            ai_response = response.choices[0].message.content.strip()
-            return ai_response
+            
+            # Envia a nova mensagem do usuário, incluindo a instrução do sistema
+            prompt = f"{self.get_system_prompt()}\n\n**Histórico da Conversa:**\n{history}\n\n**Nova Mensagem:**\n{user_message}"
+            
+            response = chat_session.send_message(prompt, safety_settings=self.safety_settings)
+            
+            return response.text.strip()
+            
         except Exception as e:
-            print(f"Erro ao chamar a API da OpenAI: {e}")
+            print(f"Erro ao chamar a API do Google: {e}")
             return "Desculpe, estou com dificuldades técnicas no momento. Por favor, tente novamente em alguns instantes."
 
-# --- ESTA É A LINHA QUE FALTAVA ---
 # Cria uma instância única do serviço para ser usada em toda a aplicação.
 llm_service = CognoxLLMService()
