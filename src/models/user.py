@@ -1,7 +1,5 @@
-from flask_sqlalchemy import SQLAlchemy
+from ..database import db  # Importa 'db' do novo arquivo database.py
 from datetime import datetime
-
-db = SQLAlchemy() # Esta linha será removida, pois o db será importado do main.py
 
 class User(db.Model):
     __tablename__ = 'users'
@@ -11,14 +9,11 @@ class User(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    def __repr__(self):
-        return f'<User {self.username}>'
-
     def to_dict(self):
         return {
             'id': self.id,
             'username': self.username,
             'email': self.email,
-            'created_at': self.created_at.isoformat() if self.created_at else None,
-            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+            'created_at': self.created_at.isoformat(),
+            'updated_at': self.updated_at.isoformat()
         }
