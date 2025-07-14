@@ -24,26 +24,26 @@ class WhatsAppAPI:
             "Authorization": f"Bearer {self.access_token}",
             "Content-Type": "application/json"
         }
-        data = {
+        url = f"{self.api_url}{self.phone_number_id}/messages"
+        payload = {
             "messaging_product": "whatsapp",
             "to": to_number,
             "type": "text",
             "text": {"body": message_body}
         }
-        url = f"{self.api_url}{self.phone_number_id}/messages"
 
         try:
-            response = requests.post(url, headers=headers, json=data)
-            response.raise_for_status()  # Levanta um erro para status de resposta ruins (4xx ou 5xx)
-            logger.info(f"Mensagem enviada com sucesso para {to_number}. Resposta: {response.json()}")
+            response = requests.post(url, headers=headers, json=payload)
+            response.raise_for_status()  # Levanta um HTTPError para respostas de erro (4xx ou 5xx)
+            logger.info(f"Mensagem enviada com sucesso para {to_number}: {response.json()}")
             return True
         except requests.exceptions.RequestException as e:
-            logger.error(f"Erro ao enviar mensagem para {to_number}: {e}. Resposta: {response.text if response else 'N/A'}")
+            logger.error(f"Erro ao enviar mensagem para {to_number}: {e}. Resposta: {e.response.text if e.response else 'N/A'}")
             return False
 
-    def mark_message_as_read(self, message_id):
-        if not self.access_token or not self.phone_number_id:
-            logger.warning("Variáveis de ambiente do WhatsApp não configuradas. Simulação de marcar como lida.")
+    def mark_message_as_read(self, message_id, phone_number_id):
+        if not self.access_token or not phone_number_id:
+            logger.warning("Variáveis de ambiente do WhatsApp não configuradas. Simulação de marcar mensagem como lida.")
             logger.info(f"[SIMULAÇÃO] Marcando mensagem {message_id} como lida.")
             return True
 
@@ -51,27 +51,26 @@ class WhatsAppAPI:
             "Authorization": f"Bearer {self.access_token}",
             "Content-Type": "application/json"
         }
-        data = {
+        url = f"{self.api_url}{phone_number_id}/messages"
+        payload = {
             "messaging_product": "whatsapp",
             "status": "read",
             "message_id": message_id
         }
-        url = f"{self.api_url}{self.phone_number_id}/messages"
 
         try:
-            response = requests.post(url, headers=headers, json=data)
+            response = requests.post(url, headers=headers, json=payload)
             response.raise_for_status()
-            logger.info(f"Mensagem {message_id} marcada como lida. Resposta: {response.json()}")
+            logger.info(f"Mensagem {message_id} marcada como lida com sucesso.")
             return True
         except requests.exceptions.RequestException as e:
-            logger.error(f"Erro ao marcar mensagem {message_id} como lida: {e}. Resposta: {response.text if response else 'N/A'}")
+            logger.error(f"Erro ao marcar mensagem {message_id} como lida: {e}. Resposta: {e.response.text if e.response else 'N/A'}")
             return False
 
     def validate_webhook_signature(self, payload, signature):
         if not self.app_secret:
             logger.warning("WHATSAPP_APP_SECRET não configurado. Pulando validação de assinatura do webhook.")
             return True
-
         try:
             expected_signature = "sha256=" + hmac.new(
                 self.app_secret.encode("utf-8"),
