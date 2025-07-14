@@ -4,7 +4,6 @@ import logging
 import json
 import time
 import random
-import re
 
 logger = logging.getLogger(__name__)
 
@@ -33,14 +32,12 @@ class WhatsAppAPI:
 
     def send_humanized_text_message(self, to_number: str, full_message: str, phone_number_id: str) -> bool:
         """
-        Envia uma mensagem de texto de forma humanizada:
-        1. Quebra a mensagem em parágrafos/frases.
-        2. Envia cada parte em uma bolha separada.
-        3. Adiciona pausas aleatórias entre as mensagens.
+        Envia uma mensagem de texto de forma humanizada, respeitando os parágrafos.
+        Cada parágrafo (separado por \n) se torna uma bolha de mensagem.
         """
-        # Divide a mensagem por quebras de linha. Respeita os parágrafos.
-        # Também divide por frases que terminam com . ? ! para maior naturalidade.
-        message_bubbles = [p.strip() for p in re.split(r'\n|(?<=[.?!])\s+', full_message) if p.strip()]
+        # A lógica agora é mais simples e poderosa: quebra apenas por quebras de linha.
+        # Isso dá o controle da fragmentação para a IA que gera o texto.
+        message_bubbles = [p.strip() for p in full_message.split('\n') if p.strip()]
 
         if not message_bubbles:
             logger.warning("Tentativa de enviar mensagem vazia.")
@@ -48,15 +45,13 @@ class WhatsAppAPI:
 
         total_success = True
         for i, bubble in enumerate(message_bubbles):
-            # Simula o tempo de digitação antes de enviar a bolha.
-            # Pausas mais curtas para as primeiras bolhas, um pouco mais longas depois.
-            typing_delay = random.uniform(1.5, 3.0) if i > 0 else random.uniform(1.0, 2.0)
+            # Simula o tempo de digitação.
+            typing_delay = random.uniform(1.8, 3.2) if i > 0 else random.uniform(1.0, 2.0)
             time.sleep(typing_delay)
 
             success = self._send_single_message(to_number, bubble, phone_number_id)
             if not success:
                 total_success = False
-                # Se uma bolha falhar, paramos para não inundar o usuário.
                 break
         
         logger.info(f"Envio humanizado para {to_number} concluído.")
@@ -64,7 +59,6 @@ class WhatsAppAPI:
 
     def mark_message_as_read(self, message_id: str, phone_number_id: str) -> bool:
         """Marca uma mensagem como lida."""
-        # (Esta função permanece a mesma)
         if not self.access_token:
             logger.error("WHATSAPP_ACCESS_TOKEN não configurado.")
             return False
