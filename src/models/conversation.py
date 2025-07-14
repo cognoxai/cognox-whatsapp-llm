@@ -2,7 +2,7 @@ from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import json
 
-db = SQLAlchemy()
+db = SQLAlchemy() # Esta linha será removida, pois o db será importado do main.py
 
 class Conversation(db.Model):
     """
@@ -19,8 +19,12 @@ class Conversation(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relacionamento com mensagens
-    messages = db.relationship('Message', backref='conversation', lazy=True, cascade='all, delete-orphan')
-    
+    messages = db.relationship('Message', backref='conversation', lazy=True)
+    scheduling_info = db.relationship('SchedulingInfo', backref='conversation', uselist=False, lazy=True)
+
+    def __repr__(self):
+        return f'<Conversation {self.phone_number}>'
+
     def to_dict(self):
         return {
             'id': self.id,
@@ -30,35 +34,37 @@ class Conversation(db.Model):
             'status': self.status,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
-            'messages_count': len(self.messages)
+            'messages': [msg.to_dict() for msg in self.messages] if self.messages else [],
+            'scheduling_info': self.scheduling_info.to_dict() if self.scheduling_info else None
         }
 
 class Message(db.Model):
     """
-    Modelo para armazenar mensagens individuais
+    Modelo para armazenar mensagens de uma conversa
     """
     __tablename__ = 'messages'
     
     id = db.Column(db.Integer, primary_key=True)
     conversation_id = db.Column(db.Integer, db.ForeignKey('conversations.id'), nullable=False)
-    message_type = db.Column(db.String(10), nullable=False)  # 'user' ou 'assistant'
+    sender = db.Column(db.String(20), nullable=False)  # 'user' or 'bot'
     content = db.Column(db.Text, nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-    has_scheduling_intent = db.Column(db.Boolean, default=False)
     
+    def __repr__(self):
+        return f'<Message from {self.sender} in conversation {self.conversation_id}>'
+
     def to_dict(self):
         return {
             'id': self.id,
             'conversation_id': self.conversation_id,
-            'message_type': self.message_type,
+            'sender': self.sender,
             'content': self.content,
-            'timestamp': self.timestamp.isoformat() if self.timestamp else None,
-            'has_scheduling_intent': self.has_scheduling_intent
+            'timestamp': self.timestamp.isoformat() if self.timestamp else None
         }
 
 class SchedulingInfo(db.Model):
     """
-    Modelo para armazenar informações de agendamento extraídas
+    Modelo para armazenar informações de agendamento
     """
     __tablename__ = 'scheduling_info'
     
