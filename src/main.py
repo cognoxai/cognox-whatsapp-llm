@@ -1,7 +1,7 @@
 import os
 import sys
 # DON\'T CHANGE THIS !!!
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__ )))
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from flask import Flask, send_from_directory
 from flask_cors import CORS
@@ -23,7 +23,9 @@ app.register_blueprint(whatsapp_bp, url_prefix='/api/whatsapp')
 app.register_blueprint(scheduling_bp, url_prefix='/api/scheduling')
 
 # Configuração do banco de dados
-app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{os.path.join(os.path.dirname(__file__), 'database', 'app.db')}"
+# Usar /tmp para garantir que o banco de dados seja gravável no Render
+db_path = os.path.join('/tmp', 'app.db')
+app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{db_path}"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
