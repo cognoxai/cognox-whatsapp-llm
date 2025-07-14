@@ -1,6 +1,7 @@
-from ..database import db # Importa 'db' do novo arquivo database.py
+from src.database import db
 from datetime import datetime
 
+# ... (o resto do arquivo permanece o mesmo)
 class Conversation(db.Model):
     __tablename__ = 'conversations'
     id = db.Column(db.Integer, primary_key=True)
@@ -16,7 +17,7 @@ class Message(db.Model):
     __tablename__ = 'messages'
     id = db.Column(db.Integer, primary_key=True)
     conversation_id = db.Column(db.Integer, db.ForeignKey('conversations.id'), nullable=False)
-    message_type = db.Column(db.String(10), nullable=False)  # 'user' ou 'assistant'
+    message_type = db.Column(db.String(10), nullable=False)
     content = db.Column(db.Text, nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
