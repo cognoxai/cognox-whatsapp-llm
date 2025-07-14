@@ -1,9 +1,9 @@
 from flask import Blueprint, request, jsonify
-from ..database import db # Importa 'db' do novo arquivo database.py
-from ..models.user import User
+from src.database import db
+from src.models.user import User
 
 user_bp = Blueprint('user_bp', __name__)
-
+# ... (o resto do arquivo permanece o mesmo)
 @user_bp.route("/users", methods=["POST"])
 def create_user():
     data = request.json
