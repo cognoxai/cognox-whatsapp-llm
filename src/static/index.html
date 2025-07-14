@@ -249,172 +249,172 @@
 
         async function loadStatus() {
             try {
-                const response = await fetch('/api/whatsapp/health');
+                const response = await fetch("/api/whatsapp/health");
                 const data = await response.json();
                 
-                document.getElementById('service-status').textContent = data.status === 'healthy' ? '✅ Online' : '❌ Offline';
-                document.getElementById('whatsapp-status').textContent = data.whatsapp_configured ? '✅ Configurado' : '❌ Não Configurado';
+                document.getElementById("service-status").textContent = data.status === "healthy" ? "✅ Online" : "❌ Offline";
+                document.getElementById("whatsapp-status").textContent = data.whatsapp_configured ? "✅ Configurado" : "❌ Não Configurado";
             } catch (error) {
-                document.getElementById('service-status').textContent = '❌ Erro';
-                console.error('Erro ao carregar status:', error);
+                document.getElementById("service-status").textContent = "❌ Erro";
+                console.error("Erro ao carregar status:", error);
             }
         }
 
         async function loadConversations() {
             try {
-                const response = await fetch('/api/whatsapp/conversations');
+                const response = await fetch("/api/whatsapp/conversations");
                 const conversations = await response.json();
                 
-                const container = document.getElementById('conversations-list');
+                const container = document.getElementById("conversations-list");
                 
                 if (Array.isArray(conversations) && conversations.length > 0) {
-                    document.getElementById('active-conversations').textContent = conversations.length;
+                    document.getElementById("active-conversations").textContent = conversations.length;
                     
                     container.innerHTML = conversations.map(conv => `
                         <div class="conversation-item ${conv.status}">
                             <div class="phone-number">📱 ${conv.phone_number}</div>
-                            <div>👤 ${conv.user_name || 'Nome não informado'}</div>
-                            <div>🏢 ${conv.company || 'Empresa não informada'}</div>
-                            <div class="timestamp">📅 ${new Date(conv.updated_at).toLocaleString('pt-BR')}</div>
+                            <div>👤 ${conv.user_name || "Nome não informado"}</div>
+                            <div>🏢 ${conv.company || "Empresa não informada"}</div>
+                            <div class="timestamp">📅 ${new Date(conv.updated_at).toLocaleString("pt-BR")}</div>
                             <div>💬 ${conv.messages_count} mensagens</div>
                         </div>
-                    `).join('');
+                    `).join("");
                 } else {
-                    container.innerHTML = '<p>Nenhuma conversa encontrada.</p>';
-                    document.getElementById('active-conversations').textContent = '0';
+                    container.innerHTML = "<p>Nenhuma conversa encontrada.</p>";
+                    document.getElementById("active-conversations").textContent = "0";
                 }
             } catch (error) {
-                document.getElementById('conversations-list').innerHTML = '<div class="error">Erro ao carregar conversas</div>';
-                console.error('Erro ao carregar conversas:', error);
+                document.getElementById("conversations-list").innerHTML = "<div class="error">Erro ao carregar conversas</div>";
+                console.error("Erro ao carregar conversas:", error);
             }
         }
 
         async function loadSchedulings() {
             try {
-                const response = await fetch('/api/scheduling/stats');
+                const response = await fetch("/api/scheduling/stats");
                 const stats = await response.json();
                 
-                if (stats.status === 'success') {
-                    document.getElementById('total-schedulings').textContent = stats.stats.total;
+                if (stats.status === "success") {
+                    document.getElementById("total-schedulings").textContent = stats.stats.total;
                 }
                 
-                const schedulingsResponse = await fetch('/api/whatsapp/scheduling');
+                const schedulingsResponse = await fetch("/api/whatsapp/scheduling");
                 const schedulings = await schedulingsResponse.json();
                 
-                const container = document.getElementById('schedulings-list');
+                const container = document.getElementById("schedulings-list");
                 
                 if (Array.isArray(schedulings) && schedulings.length > 0) {
                     container.innerHTML = schedulings.map(sched => `
                         <div class="conversation-item scheduling">
-                            <div class="phone-number">👤 ${sched.name || 'Nome não informado'}</div>
-                            <div>🏢 ${sched.company || 'Empresa não informada'}</div>
-                            <div>⏰ ${sched.preferred_time || 'Horário não definido'}</div>
-                            <div>🎯 ${sched.service_interest || 'Interesse não especificado'}</div>
+                            <div class="phone-number">👤 ${sched.name || "Nome não informado"}</div>
+                            <div>🏢 ${sched.company || "Empresa não informada"}</div>
+                            <div>⏰ ${sched.preferred_time || "Horário não definido"}</div>
+                            <div>🎯 ${sched.service_interest || "Interesse não especificado"}</div>
                             <div>📊 Status: ${sched.status}</div>
-                            <div class="timestamp">📅 ${new Date(sched.created_at).toLocaleString('pt-BR')}</div>
+                            <div class="timestamp">📅 ${new Date(sched.created_at).toLocaleString("pt-BR")}</div>
                         </div>
-                    `).join('');
+                    `).join("");
                 } else {
-                    container.innerHTML = '<p>Nenhum agendamento encontrado.</p>';
+                    container.innerHTML = "<p>Nenhum agendamento encontrado.</p>";
                 }
             } catch (error) {
-                document.getElementById('schedulings-list').innerHTML = '<div class="error">Erro ao carregar agendamentos</div>';
-                console.error('Erro ao carregar agendamentos:', error);
+                document.getElementById("schedulings-list").innerHTML = "<div class="error">Erro ao carregar agendamentos</div>";
+                console.error("Erro ao carregar agendamentos:", error);
             }
         }
 
         async function loadAvailableSlots() {
             try {
-                const response = await fetch('/api/scheduling/available-slots');
+                const response = await fetch("/api/scheduling/available-slots");
                 const data = await response.json();
                 
-                const container = document.getElementById('slots-list');
+                const container = document.getElementById("slots-list");
                 
-                if (data.status === 'success' && data.available_slots.length > 0) {
+                if (data.status === "success" && data.available_slots.length > 0) {
                     container.innerHTML = data.available_slots.map(slot => `
                         <div class="conversation-item">
                             <div>📅 ${slot.start_time} - ${slot.end_time}</div>
                             <div>✅ Disponível</div>
                         </div>
-                    `).join('');
+                    `).join("");
                 } else {
-                    container.innerHTML = '<p>Nenhum horário disponível encontrado.</p>';
+                    container.innerHTML = "<p>Nenhum horário disponível encontrado.</p>";
                 }
             } catch (error) {
-                document.getElementById('slots-list').innerHTML = '<div class="error">Erro ao carregar horários</div>';
-                console.error('Erro ao carregar horários:', error);
+                document.getElementById("slots-list").innerHTML = "<div class="error">Erro ao carregar horários</div>";
+                console.error("Erro ao carregar horários:", error);
             }
         }
 
         async function testLLM() {
-            const message = document.getElementById('test-message').value;
+            const message = document.getElementById("test-message").value;
             if (!message.trim()) {
-                alert('Digite uma mensagem para testar!');
+                alert("Digite uma mensagem para testar!");
                 return;
             }
             
-            const responseBox = document.getElementById('llm-response');
-            responseBox.style.display = 'block';
-            responseBox.textContent = 'Processando...';
+            const responseBox = document.getElementById("llm-response");
+            responseBox.style.display = "block";
+            responseBox.textContent = "Processando...";
             
             try {
                 // Simula uma mensagem do WhatsApp
                 const testData = {
                     entry: [{
                         changes: [{
-                            field: 'messages',
+                            field: "messages",
                             value: {
                                 messages: [{
-                                    from: '5511999999999',
-                                    id: 'test_' + Date.now(),
+                                    from: "5511999999999",
+                                    id: "test_" + Date.now(),
                                     text: { body: message },
-                                    type: 'text'
+                                    type: "text"
                                 }]
                             }
                         }]
                     }]
                 };
                 
-                const response = await fetch('/api/whatsapp/webhook', {
-                    method: 'POST',
+                const response = await fetch("/api/whatsapp/webhook", {
+                    method: "POST",
                     headers: {
-                        'Content-Type': 'application/json'
+                        "Content-Type": "application/json"
                     },
                     body: JSON.stringify(testData)
                 });
                 
                 if (response.ok) {
-                    responseBox.textContent = 'Mensagem processada com sucesso! Verifique as conversas para ver a resposta.';
-                    responseBox.className = 'response-box success';
+                    responseBox.textContent = "Mensagem processada com sucesso! Verifique as conversas para ver a resposta.";
+                    responseBox.className = "response-box success";
                     
                     // Atualiza as conversas após 2 segundos
                     setTimeout(() => {
                         loadConversations();
                     }, 2000);
                 } else {
-                    responseBox.textContent = 'Erro ao processar mensagem.';
-                    responseBox.className = 'response-box error';
+                    responseBox.textContent = "Erro ao processar mensagem.";
+                    responseBox.className = "response-box error";
                 }
             } catch (error) {
-                responseBox.textContent = 'Erro: ' + error.message;
-                responseBox.className = 'response-box error';
+                responseBox.textContent = "Erro: " + error.message;
+                responseBox.className = "response-box error";
             }
         }
 
         async function sendReminders() {
             try {
-                const response = await fetch('/api/scheduling/reminders', {
-                    method: 'POST'
+                const response = await fetch("/api/scheduling/reminders", {
+                    method: "POST"
                 });
                 const data = await response.json();
                 
-                if (data.status === 'success') {
+                if (data.status === "success") {
                     alert(`${data.reminders_sent} lembretes enviados com sucesso!`);
                 } else {
-                    alert('Erro ao enviar lembretes.');
+                    alert("Erro ao enviar lembretes.");
                 }
             } catch (error) {
-                alert('Erro ao enviar lembretes: ' + error.message);
+                alert("Erro ao enviar lembretes: " + error.message);
             }
         }
     </script>
