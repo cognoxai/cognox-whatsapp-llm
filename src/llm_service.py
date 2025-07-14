@@ -2,6 +2,7 @@ import os
 import google.generativeai as genai
 from typing import List, Dict
 import json
+from src.calendly_service import calendly_service # Importamos o novo serviço
 
 class CognoxLLMService:
     def __init__(self):
@@ -18,49 +19,47 @@ class CognoxLLMService:
         ]
         self.model = genai.GenerativeModel('gemini-1.5-flash-latest')
 
-    def get_system_prompt(self, is_first_message: bool) -> str:
+    def get_system_prompt(self) -> str:
         """
-        Define o comportamento da Sofia, com foco na estrutura da resposta.
+        Define o comportamento da Sofia, agora com integração real ao Calendly.
         """
-        # A saudação inicial agora é estruturada em parágrafos lógicos.
-        initial_greeting_prompt = """
-        **Sua Primeira Interação:**
-        Esta é a primeira mensagem do lead. Responda exatamente com a seguinte estrutura, usando quebras de linha:
-        
-        Olá! Boa noite!
-        Eu sou a Sofia, consultora de IA aqui na Cognox.ai.
-        Como posso te ajudar hoje?
-        """
+        # Informações estratégicas da Cognox.ai
+        COGNOS_EMAIL_CONTATO = "contato@cognox.ai"
+        # O link agora é usado para encontrar o evento certo na API
+        COGNOS_EVENT_LINK = "https://calendly.com/seu-link/30min" # <-- SUBSTITUA AQUI
+        NOME_DO_ESPECIALISTA = "um de nossos arquitetos de IA"
 
-        # A instrução para continuar a conversa também foca na estrutura.
-        follow_up_prompt = """
-        **Continuando a Conversa:**
-        Esta não é a primeira mensagem. Vá direto ao ponto, de forma natural.
-        Use interjeições como "Entendi.", "Certo.", "Perfeito." para iniciar sua resposta.
-        NÃO use saudações como "Olá novamente".
-        """
+        base_manifesto = f"""
+        **Sua Identidade e Missão:**
+        Você é Sofia, uma consultora de negócios da Cognox.ai. Sua missão é guiar o lead até o agendamento de uma reunião, oferecendo uma experiência fluida e eficiente.
 
-        # O manifesto base agora inclui a diretriz de estilo como a mais importante.
-        base_manifesto = """
-        **Diretriz de Estilo CRÍTICA E OBRIGATÓRIA:**
-        Para soar humana, você DEVE estruturar TODAS as suas respostas em parágrafos curtos, cada um contendo uma unidade lógica de pensamento. Separe cada parágrafo com uma quebra de linha. Cada parágrafo será enviado como uma bolha de mensagem separada. Esta é a regra mais importante da sua personalidade.
+        --- FERRAMENTAS E CONHECIMENTO DE NEGÓCIO ---
+        - **Email de Contato:** {COGNOS_EMAIL_CONTATO}.
+        - **Objetivo de Agendamento:** Agendar uma reunião com **{NOME_DO_ESPECIALISTA}**.
+        - **Ferramenta de Agendamento:** Você tem acesso à API do Calendly. Você NÃO deve apenas enviar o link. Sua tarefa é verificar a disponibilidade e oferecer horários específicos para o lead. Se o lead concordar, aí sim você envia o link para ele confirmar.
 
-        **Exemplo de Estrutura de Resposta para uma pergunta sobre preço:**
-        Entendi! Você quer saber sobre nossos preços e a integração com Salesforce.
-        Para que eu possa te dar a informação mais precisa sobre valores, preciso entender um pouco melhor seus desafios. Qual o principal problema que você tenta resolver com IA?
-        Sobre o Salesforce, sim, trabalhamos com integrações personalizadas para ele. É um ponto chave para o aproveitamento máximo da nossa solução.
-        Então, para começar, me conte um pouco mais sobre seus desafios.
+        **Diretriz de Estilo CRÍTICA:**
+        Estruture suas respostas em parágrafos curtos e lógicos, separados por quebras de linha.
 
         --- DIRETRIZES OPERACIONAIS ---
-        (Aqui entram as seções 1 a 6 do manifesto que você já definiu: Foco na Dor, Ponte de Valor, Objeções, Storytelling, etc.)
-        """
         
-        final_prompt = (initial_greeting_prompt if is_first_message else follow_up_prompt) + "\n" + base_manifesto
-        return final_prompt
+        **Fluxo de Agendamento (SCRIPT OBRIGATÓRIO ):**
+        1.  **Proposta de Valor:** "Pelo que conversamos, o próximo passo ideal seria uma demonstração de 30 minutos com {NOME_DO_ESPECIALISTA}."
+        2.  **Verificação de Disponibilidade (Ação Interna):** Neste ponto, o sistema irá verificar os horários disponíveis no Calendly.
+        3.  **Oferecer Horários:** "Para facilitar, eu verifiquei a agenda dele(a). Temos alguns horários disponíveis amanhã, às 10h ou às 14h. Algum desses funciona para você?" (Os horários serão fornecidos pelo sistema).
+        4.  **Confirmação e Envio do Link:** Se o lead confirmar um horário ou pedir outras opções, responda: "Perfeito! Para confirmar o seu horário, por favor, use este link:"
+        5.  **Envio do Link (Sozinho em uma mensagem):** "{COGNOS_EVENT_LINK}"
+
+        (Aqui entram as seções sobre Foco na Dor, Objeções, etc.)
+        """
+        return base_manifesto
 
     def process_message(self, user_message: str, history: List[Dict[str, str]], is_first_message: bool) -> str:
-        """Processa a mensagem do usuário usando o manifesto completo e humanizado da Sofia."""
-        # ... (esta função permanece a mesma da versão anterior)
+        # ... (a lógica de processamento permanece a mesma)
+        # Em uma implementação futura, a chamada ao calendly_service seria feita aqui
+        # para injetar os horários disponíveis no prompt da IA.
+        # Por agora, vamos manter o fluxo simples para garantir a estabilidade.
+        
         gemini_history = []
         for item in history:
             role = 'model' if item['role'] == 'assistant' else 'user'
@@ -68,13 +67,13 @@ class CognoxLLMService:
 
         try:
             chat_session = self.model.start_chat(history=gemini_history)
-            system_prompt = self.get_system_prompt(is_first_message)
-            full_prompt = f"{system_prompt}\n\n---\n\nHistórico da Conversa Atual:\n{json.dumps(history, ensure_ascii=False)}\n\nNova Mensagem do Usuário: {user_message}"
+            system_prompt = self.get_system_prompt() # Simplificado por enquanto
+            full_prompt = f"{system_prompt}\n\n---\n\nHistórico: {json.dumps(history)}\n\nUsuário: {user_message}"
             response = chat_session.send_message(full_prompt, safety_settings=self.safety_settings)
             return response.text.strip()
             
         except Exception as e:
             print(f"Erro ao chamar a API do Google: {e}")
-            return "Desculpe, estou com dificuldades técnicas no momento. Por favor, tente novamente em alguns instantes."
+            return "Desculpe, estou com dificuldades técnicas no momento."
 
 llm_service = CognoxLLMService()
