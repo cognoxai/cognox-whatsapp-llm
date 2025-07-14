@@ -1,40 +1,28 @@
-from flask import Blueprint, jsonify, request
-from src.main import db # Importar db do main.py
-from src.models.user import User
+from flask import Blueprint, request, jsonify
+from ..database import db # Importa 'db' do novo arquivo database.py
+from ..models.user import User
 
-user_bp = Blueprint("user", __name__)
+user_bp = Blueprint('user_bp', __name__)
+
+@user_bp.route("/users", methods=["POST"])
+def create_user():
+    data = request.json
+    if not data or not 'username' in data or not 'email' in data:
+        return jsonify({"error": "Missing username or email"}), 400
+    
+    if User.query.filter_by(username=data['username']).first():
+        return jsonify({"error": "Username already exists"}), 409
+        
+    if User.query.filter_by(email=data['email']).first():
+        return jsonify({"error": "Email already exists"}), 409
+
+    new_user = User(username=data['username'], email=data['email'])
+    db.session.add(new_user)
+    db.session.commit()
+    
+    return jsonify(new_user.to_dict()), 201
 
 @user_bp.route("/users", methods=["GET"])
 def get_users():
     users = User.query.all()
     return jsonify([user.to_dict() for user in users])
-
-@user_bp.route("/users", methods=["POST"])
-def create_user():
-    
-    data = request.json
-    user = User(username=data["username"], email=data["email"])
-    db.session.add(user)
-    db.session.commit()
-    return jsonify(user.to_dict()), 201
-
-@user_bp.route("/users/<int:user_id>", methods=["GET"])
-def get_user(user_id):
-    user = User.query.get_or_404(user_id)
-    return jsonify(user.to_dict())
-
-@user_bp.route("/users/<int:user_id>", methods=["PUT"])
-def update_user(user_id):
-    user = User.query.get_or_404(user_id)
-    data = request.json
-    user.username = data.get("username", user.username)
-    user.email = data.get("email", user.email)
-    db.session.commit()
-    return jsonify(user.to_dict())
-
-@user_bp.route("/users/<int:user_id>", methods=["DELETE"])
-def delete_user(user_id):
-    user = User.query.get_or_404(user_id)
-    db.session.delete(user)
-    db.session.commit()
-    return "", 204
