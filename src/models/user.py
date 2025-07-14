@@ -1,7 +1,8 @@
-from ..database import db  # Importa 'db' do novo arquivo database.py
+from src.database import db
 from datetime import datetime
 
 class User(db.Model):
+    # ... (o resto do arquivo permanece o mesmo)
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
