@@ -1,6 +1,7 @@
 import os
 import google.generativeai as genai
 from typing import List, Dict
+import json # <--- ESTA É A LINHA QUE FALTAVA
 
 class CognoxLLMService:
     """
@@ -67,18 +68,13 @@ class CognoxLLMService:
             gemini_history.append({'role': role, 'parts': [{'text': item['content']}]})
 
         try:
-            # O prompt do sistema é a alma da Sofia.
             chat_session = self.model.start_chat(history=gemini_history)
-            
-            # Enviamos o manifesto completo em todas as mensagens para garantir consistência.
-            # O modelo é otimizado para lidar com contextos longos.
             full_prompt = f"{self.get_system_prompt()}\n\n---\n\nHistórico da Conversa Atual:\n{json.dumps(history, ensure_ascii=False)}\n\nNova Mensagem do Usuário: {user_message}"
-            
             response = chat_session.send_message(full_prompt, safety_settings=self.safety_settings)
-            
             return response.text.strip()
             
         except Exception as e:
+            # Agora o print do erro vai funcionar corretamente
             print(f"Erro ao chamar a API do Google: {e}")
             return "Desculpe, estou com dificuldades técnicas no momento. Por favor, tente novamente em alguns instantes."
 
