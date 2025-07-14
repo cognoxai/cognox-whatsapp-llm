@@ -40,5 +40,4 @@ def serve(path):
     if path
     else:
         index_path = os.path.join(static_folder_path, 'index.html')
-        main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
