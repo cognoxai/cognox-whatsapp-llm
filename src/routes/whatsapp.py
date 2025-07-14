@@ -2,14 +2,14 @@ import os
 import logging
 import json
 from flask import Blueprint, request, jsonify
-from ..database import db # Importa 'db' do novo arquivo database.py
-from ..models.conversation import Conversation, Message
-from ..whatsapp_api import whatsapp_api
-from ..llm_service import llm_service
+from src.database import db
+from src.models.conversation import Conversation, Message
+# from src.whatsapp_api import whatsapp_api  # Descomente quando a API estiver pronta
+# from src.llm_service import llm_service    # Descomente quando o serviço LLM estiver pronto
 
 logger = logging.getLogger(__name__)
 whatsapp_bp = Blueprint('whatsapp_bp', __name__)
-
+# ... (o resto do arquivo permanece o mesmo)
 @whatsapp_bp.route("/webhook", methods=["GET"])
 def verify_webhook():
     mode = request.args.get("hub.mode")
@@ -29,9 +29,7 @@ def handle_webhook():
     logger.info(f"Webhook received: {json.dumps(data, indent=2)}")
     
     try:
-        # Lógica para processar a mensagem
-        # (Esta parte pode ser expandida conforme a necessidade)
-        pass # Adicione a lógica de processamento aqui
+        pass
     except Exception as e:
         logger.error(f"Error processing webhook: {e}")
 
