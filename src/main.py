@@ -5,7 +5,11 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from flask import Flask, send_from_directory
 from flask_cors import CORS
+
+# Importar db aqui para garantir que seja a mesma instância
 from src.models.user import db
+
+# Importar os modelos e blueprints APÓS a inicialização do db
 from src.models.conversation import Conversation, Message, SchedulingInfo
 from src.routes.user import user_bp
 from src.routes.whatsapp import whatsapp_bp
@@ -17,20 +21,21 @@ app.config['SECRET_KEY'] = 'asdf#FGSgvasgf$5$WGT'
 # Habilita CORS para todas as rotas
 CORS(app)
 
-# Registra blueprints
-app.register_blueprint(user_bp, url_prefix='/api')
-app.register_blueprint(whatsapp_bp, url_prefix='/api/whatsapp')
-app.register_blueprint(scheduling_bp, url_prefix='/api/scheduling')
-
 # Configuração do banco de dados
-# Usar /tmp para garantir que o banco de dados seja gravável no Render
 db_path = os.path.join('/tmp', 'app.db')
 app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{db_path}"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Inicializar o db com o app
 db.init_app(app)
 
 with app.app_context():
     db.create_all()
+
+# Registra blueprints APÓS a inicialização do db
+app.register_blueprint(user_bp, url_prefix='/api')
+app.register_blueprint(whatsapp_bp, url_prefix='/api/whatsapp')
+app.register_blueprint(scheduling_bp, url_prefix='/api/scheduling')
 
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
