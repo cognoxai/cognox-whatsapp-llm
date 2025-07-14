@@ -15,13 +15,13 @@ class SchedulingService:
     
     def __init__(self):
         # Configurações do Calendly
-        self.calendly_token = os.getenv('CALENDLY_ACCESS_TOKEN')
-        self.calendly_user_uri = os.getenv('CALENDLY_USER_URI')
-        self.calendly_base_url = 'https://api.calendly.com'
+        self.calendly_token = os.getenv("CALENDLY_ACCESS_TOKEN")
+        self.calendly_user_uri = os.getenv("CALENDLY_USER_URI")
+        self.calendly_base_url = "https://api.calendly.com"
         
         # Configurações do Google Calendar (alternativa )
-        self.google_calendar_id = os.getenv('GOOGLE_CALENDAR_ID')
-        self.google_service_account_file = os.getenv('GOOGLE_SERVICE_ACCOUNT_FILE')
+        self.google_calendar_id = os.getenv("GOOGLE_CALENDAR_ID")
+        self.google_service_account_file = os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE")
         
         if not self.calendly_token:
             logger.warning("Calendly não configurado. Usando modo simulação.")
@@ -49,36 +49,36 @@ class SchedulingService:
                 return []
             
             # Usa o primeiro event type disponível
-            event_type_uri = event_types[0]['uri']
+            event_type_uri = event_types[0]["uri"]
             
             # Busca horários disponíveis
             url = f"{self.calendly_base_url}/scheduling/available_times"
             headers = {
-                'Authorization': f'Bearer {self.calendly_token}',
-                'Content-Type': 'application/json'
+                "Authorization": f"Bearer {self.calendly_token}",
+                "Content-Type": "application/json"
             }
             
             params = {
-                'event_type': event_type_uri,
-                'start_time': f"{start_date}T00:00:00Z",
-                'end_time': f"{end_date}T23:59:59Z"
+                "event_type": event_type_uri,
+                "start_time": f"{start_date}T00:00:00Z",
+                "end_time": f"{end_date}T23:59:59Z"
             }
             
             response = requests.get(url, headers=headers, params=params)
             response.raise_for_status()
             
             data = response.json()
-            available_times = data.get('collection', [])
+            available_times = data.get("collection", [])
             
             # Formata os horários para retorno
             formatted_slots = []
             for slot in available_times:
-                start_time = datetime.fromisoformat(slot['start_time'].replace('Z', '+00:00'))
+                start_time = datetime.fromisoformat(slot["start_time"].replace("Z", "+00:00"))
                 formatted_slots.append({
-                    'start_time': start_time.strftime('%Y-%m-%d %H:%M'),
-                    'end_time': (start_time + timedelta(minutes=duration_minutes)).strftime('%Y-%m-%d %H:%M'),
-                    'available': True,
-                    'event_type_uri': event_type_uri
+                    "start_time": start_time.strftime("%Y-%m-%d %H:%M"),
+                    "end_time": (start_time + timedelta(minutes=duration_minutes)).strftime("%Y-%m-%d %H:%M"),
+                    "available": True,
+                    "event_type_uri": event_type_uri
                 })
             
             return formatted_slots
@@ -110,19 +110,19 @@ class SchedulingService:
             
             # Gera link de agendamento personalizado
             event_type = event_types[0]
-            scheduling_link = event_type.get('scheduling_url', '')
+            scheduling_link = event_type.get("scheduling_url", "")
             
             if scheduling_link:
                 # Adiciona parâmetros pré-preenchidos se possível
                 prefilled_params = []
-                if scheduling_info.get('name'):
-                    prefilled_params.append(f"name={scheduling_info['name']}")
-                if scheduling_info.get('company'):
-                    prefilled_params.append(f"company={scheduling_info['company']}")
+                if scheduling_info.get("name"):
+                    prefilled_params.append(f"name={scheduling_info["name"]}")
+                if scheduling_info.get("company"):
+                    prefilled_params.append(f"company={scheduling_info["company"]}")
                 
                 if prefilled_params:
-                    separator = '&' if '?' in scheduling_link else '?'
-                    scheduling_link += separator + '&'.join(prefilled_params)
+                    separator = "&" if "?" in scheduling_link else "?"
+                    scheduling_link += separator + "&".join(prefilled_params)
                 
                 return True, scheduling_link
             else:
@@ -142,7 +142,7 @@ class SchedulingService:
         Returns:
             Tuple[bool, str]: (sucesso, mensagem/link)
         """
-        # Implementação para criação direta via API
+        # Implementação para criação real via API
         # Nota: Calendly API v2 tem limitações para criação direta
         # Esta é uma implementação conceitual
         
@@ -174,21 +174,21 @@ class SchedulingService:
         
         # Padrões para dias da semana
         weekdays = {
-            'segunda': 0, 'segunda-feira': 0,
-            'terça': 1, 'terça-feira': 1,
-            'quarta': 2, 'quarta-feira': 2,
-            'quinta': 3, 'quinta-feira': 3,
-            'sexta': 4, 'sexta-feira': 4,
-            'sábado': 5, 'sabado': 5,
-            'domingo': 6
+            "segunda": 0, "segunda-feira": 0,
+            "terça": 1, "terça-feira": 1,
+            "quarta": 2, "quarta-feira": 2,
+            "quinta": 3, "quinta-feira": 3,
+            "sexta": 4, "sexta-feira": 4,
+            "sábado": 5, "sabado": 5,
+            "domingo": 6
         }
         
         # Padrões para horários
         time_patterns = [
-            r'(\d{1,2}):(\d{2})',  # 14:30
-            r'(\d{1,2})h(\d{2})',  # 14h30
-            r'(\d{1,2})h',         # 14h
-            r'(\d{1,2})\s*horas',  # 14 horas
+            r"(\d{1,2}):(\d{2})",  # 14:30
+            r"(\d{1,2})h(\d{2})",  # 14h30
+            r"(\d{1,2})h",         # 14h
+            r"(\d{1,2})\s*horas",  # 14 horas
         ]
         
         result = {}
@@ -202,7 +202,7 @@ class SchedulingService:
                 if days_ahead <= 0:  # Se já passou esta semana
                     days_ahead += 7
                 target_date = today + timedelta(days=days_ahead)
-                result['date'] = target_date.strftime('%Y-%m-%d')
+                result["date"] = target_date.strftime("%Y-%m-%d")
                 break
         
         # Busca horário
@@ -213,23 +213,23 @@ class SchedulingService:
                 minute = int(match.group(2)) if len(match.groups()) > 1 else 0
                 
                 # Ajusta para formato 24h se necessário
-                if 'tarde' in time_text and hour < 12:
+                if "tarde" in time_text and hour < 12:
                     hour += 12
-                elif 'manhã' in time_text and hour > 12:
+                elif "manhã" in time_text and hour > 12:
                     hour -= 12
                 
-                result['time'] = f"{hour:02d}:{minute:02d}"
+                result["time"] = f"{hour:02d}:{minute:02d}"
                 break
         
         # Busca referências relativas
-        if 'amanhã' in time_text:
+        if "amanhã" in time_text:
             tomorrow = datetime.now() + timedelta(days=1)
-            result['date'] = tomorrow.strftime('%Y-%m-%d')
-        elif 'hoje' in time_text:
-            result['date'] = datetime.now().strftime('%Y-%m-%d')
-        elif 'próxima semana' in time_text:
+            result["date"] = tomorrow.strftime("%Y-%m-%d")
+        elif "hoje" in time_text:
+            result["date"] = datetime.now().strftime("%Y-%m-%d")
+        elif "próxima semana" in time_text:
             next_week = datetime.now() + timedelta(days=7)
-            result['date'] = next_week.strftime('%Y-%m-%d')
+            result["date"] = next_week.strftime("%Y-%m-%d")
         
         return result if result else None
     
@@ -240,20 +240,20 @@ class SchedulingService:
         try:
             url = f"{self.calendly_base_url}/event_types"
             headers = {
-                'Authorization': f'Bearer {self.calendly_token}',
-                'Content-Type': 'application/json'
+                "Authorization": f"Bearer {self.calendly_token}",
+                "Content-Type": "application/json"
             }
             
             params = {
-                'user': self.calendly_user_uri,
-                'active': 'true'
+                "user": self.calendly_user_uri,
+                "active": "true"
             }
             
             response = requests.get(url, headers=headers, params=params)
             response.raise_for_status()
             
             data = response.json()
-            return data.get('collection', [])
+            return data.get("collection", [])
             
         except Exception as e:
             logger.error(f"Erro ao buscar event types: {str(e)}")
@@ -264,8 +264,8 @@ class SchedulingService:
         Retorna horários simulados para demonstração
         """
         slots = []
-        current_date = datetime.strptime(start_date, '%Y-%m-%d')
-        end_date_obj = datetime.strptime(end_date, '%Y-%m-%d')
+        current_date = datetime.strptime(start_date, "%Y-%m-%d")
+        end_date_obj = datetime.strptime(end_date, "%Y-%m-%d")
         
         while current_date <= end_date_obj:
             # Pula fins de semana
@@ -273,19 +273,19 @@ class SchedulingService:
                 # Horários de manhã (9h às 12h)
                 for hour in [9, 10, 11]:
                     slots.append({
-                        'start_time': current_date.replace(hour=hour, minute=0).strftime('%Y-%m-%d %H:%M'),
-                        'end_time': current_date.replace(hour=hour+1, minute=0).strftime('%Y-%m-%d %H:%M'),
-                        'available': True,
-                        'event_type_uri': 'mock_event_type'
+                        "start_time": current_date.replace(hour=hour, minute=0).strftime("%Y-%m-%d %H:%M"),
+                        "end_time": current_date.replace(hour=hour+1, minute=0).strftime("%Y-%m-%d %H:%M"),
+                        "available": True,
+                        "event_type_uri": "mock_event_type"
                     })
                 
                 # Horários de tarde (14h às 17h)
                 for hour in [14, 15, 16, 17]:
                     slots.append({
-                        'start_time': current_date.replace(hour=hour, minute=0).strftime('%Y-%m-%d %H:%M'),
-                        'end_time': current_date.replace(hour=hour+1, minute=0).strftime('%Y-%m-%d %H:%M'),
-                        'available': True,
-                        'event_type_uri': 'mock_event_type'
+                        "start_time": current_date.replace(hour=hour, minute=0).strftime("%Y-%m-%d %H:%M"),
+                        "end_time": current_date.replace(hour=hour+1, minute=0).strftime("%Y-%m-%d %H:%M"),
+                        "available": True,
+                        "event_type_uri": "mock_event_type"
                     })
             
             current_date += timedelta(days=1)
@@ -296,9 +296,9 @@ class SchedulingService:
         """
         Simula agendamento para demonstração
         """
-        name = scheduling_info.get('name', 'Cliente')
-        company = scheduling_info.get('company', '')
-        preferred_time = scheduling_info.get('preferred_time', 'horário preferido')
+        name = scheduling_info.get("name", "Cliente")
+        company = scheduling_info.get("company", "")
+        preferred_time = scheduling_info.get("preferred_time", "horário preferido")
         
         mock_link = f"https://calendly.com/cognox-ai/reuniao?name={name}&company={company}"
         
