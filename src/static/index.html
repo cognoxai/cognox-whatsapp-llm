@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cognox.ai - WhatsApp LLM Admin</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .status-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            border-left: 4px solid #667eea;
+        }
+        
+        .status-card h3 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .status-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+        }
+        
+        .section h2 {
+            color: #333;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+            transition: transform 0.2s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .conversation-item {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-left: 4px solid #28a745;
+        }
+        
+        .conversation-item.scheduling {
+            border-left-color: #ffc107;
+        }
+        
+        .conversation-item.completed {
+            border-left-color: #6c757d;
+        }
+        
+        .phone-number {
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .timestamp {
+            color: #6c757d;
+            font-size: 0.9em;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #6c757d;
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+        }
+        
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+        }
+        
+        .test-section {
+            background: #e3f2fd;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .test-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        
+        .response-box {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 10px;
+            min-height: 100px;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 Cognox.ai</h1>
+            <p>Painel de Administração - WhatsApp LLM</p>
+        </div>
+        
+        <div class="content">
+            <!-- Status Cards -->
+            <div class="status-grid">
+                <div class="status-card">
+                    <h3>Status do Serviço</h3>
+                    <div class="status-value" id="service-status">Carregando...</div>
+                </div>
+                <div class="status-card">
+                    <h3>Conversas Ativas</h3>
+                    <div class="status-value" id="active-conversations">0</div>
+                </div>
+                <div class="status-card">
+                    <h3>Agendamentos</h3>
+                    <div class="status-value" id="total-schedulings">0</div>
+                </div>
+                <div class="status-card">
+                    <h3>WhatsApp</h3>
+                    <div class="status-value" id="whatsapp-status">❌</div>
+                </div>
+            </div>
+            
+            <!-- Teste do LLM -->
+            <div class="section test-section">
+                <h2>🧪 Teste do LLM</h2>
+                <input type="text" id="test-message" class="test-input" placeholder="Digite uma mensagem para testar o LLM...">
+                <button class="btn" onclick="testLLM()">Enviar Teste</button>
+                <div id="llm-response" class="response-box" style="display: none;"></div>
+            </div>
+            
+            <!-- Conversas Recentes -->
+            <div class="section">
+                <h2>💬 Conversas Recentes</h2>
+                <button class="btn" onclick="loadConversations()">Atualizar Conversas</button>
+                <div id="conversations-list" class="loading">Carregando conversas...</div>
+            </div>
+            
+            <!-- Agendamentos -->
+            <div class="section">
+                <h2>📅 Agendamentos</h2>
+                <button class="btn" onclick="loadSchedulings()">Atualizar Agendamentos</button>
+                <button class="btn" onclick="sendReminders()">Enviar Lembretes</button>
+                <div id="schedulings-list" class="loading">Carregando agendamentos...</div>
+            </div>
+            
+            <!-- Horários Disponíveis -->
+            <div class="section">
+                <h2>⏰ Horários Disponíveis</h2>
+                <button class="btn" onclick="loadAvailableSlots()">Ver Horários</button>
+                <div id="slots-list" class="loading">Clique para carregar horários...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Carrega status inicial
+        window.onload = function() {
+            loadStatus();
+            loadConversations();
+            loadSchedulings();
+        };
+
+        async function loadStatus() {
+            try {
+                const response = await fetch('/api/whatsapp/health');
+                const data = await response.json();
+                
+                document.getElementById('service-status').textContent = data.status === 'healthy' ? '✅ Online' : '❌ Offline';
+                document.getElementById('whatsapp-status').textContent = data.whatsapp_configured ? '✅ Configurado' : '❌ Não Configurado';
+            } catch (error) {
+                document.getElementById('service-status').textContent = '❌ Erro';
+                console.error('Erro ao carregar status:', error);
+            }
+        }
+
+        async function loadConversations() {
+            try {
+                const response = await fetch('/api/whatsapp/conversations');
+                const conversations = await response.json();
+                
+                const container = document.getElementById('conversations-list');
+                
+                if (Array.isArray(conversations) && conversations.length > 0) {
+                    document.getElementById('active-conversations').textContent = conversations.length;
+                    
+                    container.innerHTML = conversations.map(conv => `
+                        <div class="conversation-item ${conv.status}">
+                            <div class="phone-number">📱 ${conv.phone_number}</div>
+                            <div>👤 ${conv.user_name || 'Nome não informado'}</div>
+                            <div>🏢 ${conv.company || 'Empresa não informada'}</div>
+                            <div class="timestamp">📅 ${new Date(conv.updated_at).toLocaleString('pt-BR')}</div>
+                            <div>💬 ${conv.messages_count} mensagens</div>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<p>Nenhuma conversa encontrada.</p>';
+                    document.getElementById('active-conversations').textContent = '0';
+                }
+            } catch (error) {
+                document.getElementById('conversations-list').innerHTML = '<div class="error">Erro ao carregar conversas</div>';
+                console.error('Erro ao carregar conversas:', error);
+            }
+        }
+
+        async function loadSchedulings() {
+            try {
+                const response = await fetch('/api/scheduling/stats');
+                const stats = await response.json();
+                
+                if (stats.status === 'success') {
+                    document.getElementById('total-schedulings').textContent = stats.stats.total;
+                }
+                
+                const schedulingsResponse = await fetch('/api/whatsapp/scheduling');
+                const schedulings = await schedulingsResponse.json();
+                
+                const container = document.getElementById('schedulings-list');
+                
+                if (Array.isArray(schedulings) && schedulings.length > 0) {
+                    container.innerHTML = schedulings.map(sched => `
+                        <div class="conversation-item scheduling">
+                            <div class="phone-number">👤 ${sched.name || 'Nome não informado'}</div>
+                            <div>🏢 ${sched.company || 'Empresa não informada'}</div>
+                            <div>⏰ ${sched.preferred_time || 'Horário não definido'}</div>
+                            <div>🎯 ${sched.service_interest || 'Interesse não especificado'}</div>
+                            <div>📊 Status: ${sched.status}</div>
+                            <div class="timestamp">📅 ${new Date(sched.created_at).toLocaleString('pt-BR')}</div>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<p>Nenhum agendamento encontrado.</p>';
+                }
+            } catch (error) {
+                document.getElementById('schedulings-list').innerHTML = '<div class="error">Erro ao carregar agendamentos</div>';
+                console.error('Erro ao carregar agendamentos:', error);
+            }
+        }
+
+        async function loadAvailableSlots() {
+            try {
+                const response = await fetch('/api/scheduling/available-slots');
+                const data = await response.json();
+                
+                const container = document.getElementById('slots-list');
+                
+                if (data.status === 'success' && data.available_slots.length > 0) {
+                    container.innerHTML = data.available_slots.map(slot => `
+                        <div class="conversation-item">
+                            <div>📅 ${slot.start_time} - ${slot.end_time}</div>
+                            <div>✅ Disponível</div>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<p>Nenhum horário disponível encontrado.</p>';
+                }
+            } catch (error) {
+                document.getElementById('slots-list').innerHTML = '<div class="error">Erro ao carregar horários</div>';
+                console.error('Erro ao carregar horários:', error);
+            }
+        }
+
+        async function testLLM() {
+            const message = document.getElementById('test-message').value;
+            if (!message.trim()) {
+                alert('Digite uma mensagem para testar!');
+                return;
+            }
+            
+            const responseBox = document.getElementById('llm-response');
+            responseBox.style.display = 'block';
+            responseBox.textContent = 'Processando...';
+            
+            try {
+                // Simula uma mensagem do WhatsApp
+                const testData = {
+                    entry: [{
+                        changes: [{
+                            field: 'messages',
+                            value: {
+                                messages: [{
+                                    from: '5511999999999',
+                                    id: 'test_' + Date.now(),
+                                    text: { body: message },
+                                    type: 'text'
+                                }]
+                            }
+                        }]
+                    }]
+                };
+                
+                const response = await fetch('/api/whatsapp/webhook', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(testData)
+                });
+                
+                if (response.ok) {
+                    responseBox.textContent = 'Mensagem processada com sucesso! Verifique as conversas para ver a resposta.';
+                    responseBox.className = 'response-box success';
+                    
+                    // Atualiza as conversas após 2 segundos
+                    setTimeout(() => {
+                        loadConversations();
+                    }, 2000);
+                } else {
+                    responseBox.textContent = 'Erro ao processar mensagem.';
+                    responseBox.className = 'response-box error';
+                }
+            } catch (error) {
+                responseBox.textContent = 'Erro: ' + error.message;
+                responseBox.className = 'response-box error';
+            }
+        }
+
+        async function sendReminders() {
+            try {
+                const response = await fetch('/api/scheduling/reminders', {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    alert(`${data.reminders_sent} lembretes enviados com sucesso!`);
+                } else {
+                    alert('Erro ao enviar lembretes.');
+                }
+            } catch (error) {
+                alert('Erro ao enviar lembretes: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>
