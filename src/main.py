@@ -1,7 +1,7 @@
 import os
 import sys
-# DON'T CHANGE THIS !!!
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+# DON\'T CHANGE THIS !!!
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__ )))
 
 from flask import Flask, send_from_directory
 from flask_cors import CORS
