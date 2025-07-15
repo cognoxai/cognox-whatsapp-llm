@@ -2,6 +2,8 @@ import os
 import logging
 from calendly import Calendly
 from datetime import datetime, timedelta
+from typing import List 
+
 
 logger = logging.getLogger(__name__)
 
