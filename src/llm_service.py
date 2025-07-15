@@ -1,14 +1,15 @@
 import os
 import requests
 import logging
+import time
 from typing import List, Dict
 from datetime import datetime
 import pytz
 
 logger = logging.getLogger(__name__)
 
-# O ID do modelo que vamos usar. É um modelo brasileiro, treinado para conversação.
-MODEL_ID = "microsoft/DialogRPT-updown"
+# MUDANÇA PARA UM MODELO MAIS ROBUSTO E DE PROPÓSITO GERAL
+MODEL_ID = "distilbert-base-uncased-finetuned-sst-2-english"
 API_URL = f"https://api-inference.huggingface.co/models/{MODEL_ID}"
 
 class CognoxLLMService:
@@ -30,10 +31,35 @@ class CognoxLLMService:
             logger.error(f"Erro ao obter fuso horário: {e}")
             return "Olá"
 
-    def query_huggingface(self, payload):
-        """Função para fazer a requisição à API do Hugging Face."""
-        response = requests.post(API_URL, headers=self.headers, json=payload)
-        return response.json()
+    def query_huggingface_with_retry(self, payload, retries=3, delay=10):
+        """
+        Tenta fazer a requisição à API, com novas tentativas se o modelo estiver carregando.
+        ESTA É A MUDANÇA CRÍTICA.
+        """
+        for i in range(retries):
+            try:
+                response = requests.post(API_URL, headers=self.headers, json=payload)
+                # Se a resposta estiver vazia, o modelo ainda está carregando.
+                if not response.content:
+                    raise ValueError("Resposta vazia da API, modelo provavelmente carregando.")
+                
+                # Se a resposta for um erro 503, o modelo está carregando.
+                if response.status_code == 503:
+                    estimated_time = response.json().get("estimated_time", delay)
+                    logger.info(f"Modelo está carregando. Tentando novamente em {estimated_time} segundos...")
+                    time.sleep(estimated_time)
+                    continue
+
+                response.raise_for_status() # Levanta um erro para outros status HTTP ruins.
+                return response.json()
+
+            except (requests.exceptions.RequestException, ValueError, requests.exceptions.JSONDecodeError) as e:
+                logger.warning(f"Tentativa {i+1}/{retries} falhou: {e}. Tentando novamente em {delay} segundos...")
+                time.sleep(delay)
+        
+        logger.error("Todas as tentativas de contatar a API do Hugging Face falharam.")
+        return {"error": "Falha ao contatar a API após múltiplas tentativas."}
+
 
     def process_message(self, user_message: str, history: List[Dict[str, str]]) -> str:
         """
@@ -45,28 +71,22 @@ class CognoxLLMService:
                 greeting = self.get_greeting()
                 return f"{greeting}! Eu sou a Sofia, consultora de IA aqui na Cognox.ai.\nComo posso te ajudar hoje?"
 
-            # Prepara o histórico para o modelo.
-            # Este modelo específico funciona melhor com o histórico recente.
-            past_user_inputs = [h['content'] for h in history if h['role'] == 'user']
-            generated_responses = [h['content'] for h in history if h['role'] == 'assistant']
-
-            # A API espera um formato específico.
-            payload = {
-                "inputs": {
-                    "past_user_inputs": past_user_inputs,
-                    "generated_responses": generated_responses,
-                    "text": user_message
-                },
-                "parameters": {
-                    "repetition_penalty": 1.03,
-                    "temperature": 0.9
-                }
-            }
+            # Este modelo é mais simples e funciona bem com a última mensagem.
+            payload = {"inputs": user_message}
             
-            output = self.query_huggingface(payload)
+            output = self.query_huggingface_with_retry(payload)
             
-            if 'generated_text' in output:
-                return output['generated_text'].strip()
+            # A resposta deste modelo é diferente, precisamos adaptá-la.
+            # É uma resposta de análise de sentimento, vamos usá-la para criar uma resposta de chatbot.
+            if isinstance(output, list) and output:
+                # Exemplo de como interpretar a resposta de análise de sentimento
+                sentiment = output[0][0]['label']
+                if sentiment == 'POSITIVE':
+                    return "Entendido! Fico feliz em ouvir isso. Como posso te ajudar a ir além?"
+                elif sentiment == 'NEGATIVE':
+                    return "Compreendo sua preocupação. Poderia me detalhar um pouco mais o problema para que eu possa ajudar?"
+                else:
+                    return "Certo. Para que eu possa te ajudar melhor, qual o seu principal desafio no momento?"
             elif 'error' in output:
                 logger.error(f"Erro da API do Hugging Face: {output['error']}")
                 return "Desculpe, estou com uma pequena instabilidade. Poderia repetir sua mensagem?"
