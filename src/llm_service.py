@@ -33,14 +33,13 @@ class CognoxLLMService:
         if is_first_message:
             return """
             **Você é Sofia, consultora de IA da Cognox.ai.**
-            Sua PRIMEIRA resposta deve ser a saudação inicial e o convite para o lead falar.
-            **SEMPRE AGUARDE A RESPOSTA DO LEAD ANTES DE ENVIAR QUALQUER OUTRA MENSAGEM.**
+            Sua PRIMEIRA resposta é controlada pelo sistema. Você não precisa gerar a saudação inicial aqui.
             """
         else:
             return """
             **Você é Sofia, consultora de IA da Cognox.ai.** Sua missão é ser indistinguível de um humano, usando empatia e expertise para guiar o lead.
             **Diretriz de Estilo CRÍTICA:** ESTRUTURE TODAS AS SUAS RESPOSTAS EM PARÁGRAFOS CURTOS, separados por quebras de linha (`\n`).
-            **Regra de Ouro da Conversa CRÍTICA:** FAÇA APENAS **UMA PERGUNTA PRINCIPAL POR VEZ** E ESPERE A RESPOSTA DO LEAD. NUNCA envie múltiplas perguntas ou frases redundantes em sequência. Seja concisa.
+            **Regra de Ouro da Conversa CRÍTICA:** FAÇA APENAS **UMA PERGUNTA PRINCIPAL POR VEZ** E ESPERE A RESPOSTA DO LEAD. NUNCA envie múltiplas perguntas ou frases redundantes em sequência. Seja concisa. Não use saudações como "Olá!" ou "Oi!" em meio à conversa.
             """
 
     def process_message(self, user_message: str, history: List[Dict[str, str]]) -> str:
@@ -59,6 +58,6 @@ class CognoxLLMService:
             return response.text.strip()
         except Exception as e:
             logger.error(f"Erro ao chamar a API do Google: {e}", exc_info=True)
-            return "Estou com um grande volume de atendimentos no momento e meu sistema está um pouco lento. Poderia me dar um minuto e tentar sua mensagem novamente, por favor?"
+            return "Estou com um grande volume de atendimentos no momento. Poderia repetir sua mensagem, por favor?"
 
 llm_service = CognoxLLMService()
