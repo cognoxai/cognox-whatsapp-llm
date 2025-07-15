@@ -5,109 +5,79 @@ import logging
 from datetime import datetime
 import pytz
 
-# Configuração do logger para este arquivo
 logger = logging.getLogger(__name__)
 
 class CognoxLLMService:
-    """
-    A classe que gerencia a lógica de conversação com a IA (Google Gemini).
-    """
     def __init__(self):
-        """
-        Inicializa o serviço, configurando a API do Google.
-        """
         self.api_key = os.getenv("GOOGLE_API_KEY")
-        if not self.api_key:
-            # Se a chave da API não estiver configurada, levanta um erro claro.
-            raise ValueError("A variável de ambiente GOOGLE_API_KEY não foi definida.")
-        
+        if not self.api_key: raise ValueError("GOOGLE_API_KEY não definida.")
         genai.configure(api_key=self.api_key)
         self.model = genai.GenerativeModel('gemini-1.5-flash-latest')
 
     def get_greeting(self) -> str:
-        """
-        Retorna a saudação correta ("Bom dia", "Boa tarde", "Boa noite")
-        com base no horário de São Paulo.
-        """
         try:
-            # Define o fuso horário de São Paulo
             tz = pytz.timezone('America/Sao_Paulo')
             now = datetime.now(tz)
             hour = now.hour
-            
-            if 5 <= hour < 12:
-                return "Bom dia"
-            elif 12 <= hour < 18:
-                return "Boa tarde"
-            else:
-                return "Boa noite"
-        except Exception as e:
-            # Em caso de erro, retorna uma saudação genérica.
-            logger.error(f"Erro ao obter fuso horário: {e}")
-            return "Olá"
+            if 5 <= hour < 12: return "Bom dia"
+            elif 12 <= hour < 18: return "Boa tarde"
+            else: return "Boa noite"
+        except Exception: return "Olá"
 
-    def get_system_prompt(self, is_first_message: bool) -> str:
-        """
-        Gera o prompt do sistema para a IA, com regras diferentes para a primeira
-        mensagem e para as mensagens subsequentes, conforme sua especificação.
-        """
+    def get_system_prompt(self, is_first_message: bool, available_slots: List[str]) -> str:
         greeting = self.get_greeting()
+        
+        # Constrói a parte do prompt sobre o agendamento
+        scheduling_info = "O agendamento está indisponível no momento."
+        if available_slots:
+            slots_text = "\n".join([f"- {slot}" for slot in available_slots])
+            scheduling_info = f"""
+            **Agendamento:**
+            - Para agendar, ofereça o link: https://calendly.com/cognox-ai/30min
+            - Você pode mencionar que alguns horários disponíveis para os próximos dias são:
+            {slots_text}
+            """
 
         if is_first_message:
-            # Instrução para a primeira mensagem: ser concisa e direta.
             return f"""
             **Você é Sofia, consultora de IA da Cognox.ai.**
-            **Sua PRIMEIRA resposta DEVE SER EXATAMENTE esta, em 3 parágrafos separados por quebra de linha:**
+            **Sua PRIMEIRA resposta DEVE SER EXATAMENTE esta, em 3 parágrafos:**
             {greeting}!
             Eu sou a Sofia, consultora de IA aqui na Cognox.ai.
             Como posso te ajudar hoje?
             **NÃO ENVIE MAIS NADA. ESPERE A RESPOSTA DO LEAD.**
             """
         else:
-            # Instruções para o resto da conversa, focando em naturalidade e escuta ativa.
-            return """
+            return f"""
             **Você é Sofia, consultora de IA da Cognox.ai.** Sua missão é ser indistinguível de um humano, usando empatia e expertise para guiar o lead.
 
-            **Diretriz de Estilo CRÍTICA:** ESTRUTURE TODAS AS SUAS RESPOSTAS EM PARÁGRAFOS CURTOS, separados por quebras de linha (`\n`). Cada parágrafo vira uma bolha de mensagem. Seja natural, conciso e NUNCA repita a mesma pergunta ou ideia.
+            **Diretriz de Estilo CRÍTICA:** ESTRUTURE TODAS AS SUAS RESPOSTAS EM PARÁGRAFOS CURTOS, separados por quebras de linha (`\n` ).
 
-            **Regra de Ouro da Conversa:** FAÇA UMA PERGUNTA E ESPERE A RESPOSTA. Nunca envie múltiplas perguntas antes do lead responder. Mostre que você está ouvindo.
+            **Regra de Ouro da Conversa:** FAÇA UMA PERGUNTA E ESPERE A RESPOSTA. Nunca envie múltiplas perguntas antes do lead responder.
 
-            **Fluxo de Conversa (Após a primeira interação):**
-            1.  **Sondagem:** Use perguntas abertas e direcionadas para entender a dor do cliente (ex: "Para te ajudar melhor, qual o principal desafio que você está enfrentando atualmente?").
-            2.  **Ponte de Valor:** Conecte a dor a uma solução da Cognox, focando nos benefícios.
-            3.  **Gerenciamento de Objeções:** Use reformulação e prova social para lidar com objeções de preço, necessidade ou urgência.
+            **Fluxo de Conversa:**
+            1.  **Sondagem:** Entenda a dor do cliente.
+            2.  **Ponte de Valor:** Conecte a dor a uma solução da Cognox.
+            3.  **Agendamento:** Quando a dor e a solução estiverem claras, sugira o agendamento de forma natural.
+            
+            {scheduling_info}
             """
 
-    def process_message(self, user_message: str, history: List[Dict[str, str]]) -> str:
-        """
-        Processa a mensagem do usuário e retorna a resposta da IA.
-        """
+    def process_message(self, user_message: str, history: List[Dict[str, str]], available_slots: List[str]) -> str:
         try:
-            # Verifica se é a primeira mensagem do usuário na conversa.
             is_first_message = len(history) <= 1
+            system_prompt = self.get_system_prompt(is_first_message, available_slots)
             
-            # Obtém o prompt do sistema apropriado.
-            system_prompt = self.get_system_prompt(is_first_message)
-            
-            # Prepara o histórico para a API do Gemini.
-            gemini_history = []
-            for item in history[:-1]: # Exclui a última mensagem do usuário, que será enviada separadamente.
-                role = 'model' if item['role'] == 'assistant' else 'user'
-                gem_item = {'role': role, 'parts': [{'text': item['content']}]}
-                gemini_history.append(gem_item)
+            if is_first_message:
+                greeting = self.get_greeting()
+                return f"{greeting}!\nEu sou a Sofia, consultora de IA aqui na Cognox.ai.\nComo posso te ajudar hoje?"
 
-            # Inicia a sessão de chat com o histórico.
+            gemini_history = [{'role': 'model' if item['role'] == 'assistant' else 'user', 'parts': [{'text': item['content']}]} for item in history[:-1]]
             chat_session = self.model.start_chat(history=gemini_history)
-            
-            # Envia a nova mensagem do usuário junto com o prompt do sistema.
-            response = chat_session.send_message(f"{system_prompt}\n\n---\n\nCONTEXTO DA CONVERSA ATÉ AGORA. A MENSAGEM ATUAL DO USUÁRIO É: {user_message}")
-            
+            response = chat_session.send_message(f"{system_prompt}\n\n---\n\nCONTEXTO: {user_message}")
             return response.text.strip()
-            
         except Exception as e:
-            # Lida com erros da API do Google e retorna uma mensagem amigável.
             logger.error(f"Erro ao chamar a API do Google: {e}", exc_info=True)
-            return "Estou com um grande volume de atendimentos no momento e meu sistema está um pouco lento. Poderia me dar um minuto e tentar sua mensagem novamente, por favor?"
+            return "Estou com um grande volume de atendimentos no momento. Poderia repetir sua mensagem, por favor?"
 
-# Cria uma instância única do serviço para ser usada em toda a aplicação.
 llm_service = CognoxLLMService()
