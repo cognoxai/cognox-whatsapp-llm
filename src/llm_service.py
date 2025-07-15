@@ -8,8 +8,8 @@ import pytz
 
 logger = logging.getLogger(__name__)
 
-# MUDANÇA PARA O MODELO QUE VOCÊ ESCOLHEU: BLENDERBOT
-MODEL_ID = "facebook/blenderbot-400M-distill"
+# MUDANÇA PARA O MODELO QUE VOCÊ ESCOLHEU: GPT2
+MODEL_ID = "gpt2"
 API_URL = f"https://api-inference.huggingface.co/models/{MODEL_ID}"
 
 class CognoxLLMService:
