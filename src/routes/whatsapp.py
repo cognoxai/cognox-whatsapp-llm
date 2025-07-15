@@ -6,7 +6,6 @@ from src.database import db
 from src.models.conversation import Conversation, Message
 from src.whatsapp_api import whatsapp_api
 from src.llm_service import llm_service
-from src.calendly_service import calendly_service # <-- IMPORTAÇÃO CORRETA
 
 logger = logging.getLogger(__name__)
 whatsapp_bp = Blueprint('whatsapp_bp', __name__)
@@ -35,11 +34,7 @@ def process_message_background(app, data):
 
             history = [{"role": msg.message_type, "content": msg.content} for msg in conversation.messages]
             
-            # Busca os horários do Calendly ANTES de chamar a IA
-            available_slots = calendly_service.get_available_slots()
-            
-            # Passa os horários para a IA
-            ai_response = llm_service.process_message(msg_body, history, available_slots)
+            ai_response = llm_service.process_message(msg_body, history)
             
             ai_message = Message(conversation_id=conversation.id, message_type="assistant", content=ai_response)
             db.session.add(ai_message)
