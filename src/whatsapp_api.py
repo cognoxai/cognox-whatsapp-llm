@@ -3,49 +3,74 @@ import requests
 import logging
 import time
 import random
+from typing import List
 
 logger = logging.getLogger(__name__)
 
 class WhatsAppAPI:
     def __init__(self):
         self.access_token = os.getenv("WHATSAPP_ACCESS_TOKEN")
+        if not self.access_token:
+            raise ValueError("WHATSAPP_ACCESS_TOKEN não definida.")
         self.base_url = "https://graph.facebook.com/v19.0"
-        self.headers = {
-            "Authorization": f"Bearer {self.access_token}",
-            "Content-Type": "application/json"
-        }
 
-    def _send_request(self, payload: dict, phone_number_id: str ) -> bool:
-        url = f"{self.base_url}/{phone_number_id}/messages"
+    def send_request(self, method, endpoint, data=None ):
+        url = f"{self.base_url}/{endpoint}"
+        headers = {
+            "Authorization": f"Bearer {self.access_token}",
+            "Content-Type": "application/json",
+        }
         try:
-            response = requests.post(url, headers=self.headers, json=payload)
+            response = requests.request(method, url, headers=headers, json=data)
             response.raise_for_status()
-            return True
+            return response.json()
         except requests.exceptions.RequestException as e:
             logger.error(f"Erro na requisição para {url}: {e}. Resposta: {e.response.text if e.response else 'N/A'}")
-            return False
+            return None
 
-    def _toggle_typing_indicator(self, to_number: str, phone_number_id: str, is_typing: bool):
-        payload = {"messaging_product": "whatsapp", "to": to_number, "action": "typing_on" if is_typing else "typing_off"}
-        self._send_request(payload, phone_number_id)
+    def mark_message_as_read(self, wamid, phone_number_id):
+        data = {"messaging_product": "whatsapp", "status": "read", "message_id": wamid}
+        return self.send_request("POST", f"{phone_number_id}/messages", data)
 
-    def send_humanized_text_message(self, to_number: str, full_message: str, phone_number_id: str):
-        message_bubbles = [p.strip() for p in full_message.split('\n') if p.strip()]
-        if not message_bubbles: return
+    def send_typing_indicator(self, recipient_id, phone_number_id, stop=False):
+        action = "typing_off" if stop else "typing_on"
+        data = {"recipient_type": "individual", "to": recipient_id, "messaging_product": "whatsapp", "type": "typing", "action": action}
+        # Esta chamada não é oficial e pode não funcionar, mas é a tentativa padrão.
+        # A lógica principal de delay funcionará independentemente.
+        self.send_request("POST", f"{phone_number_id}/messages", data)
 
-        self._toggle_typing_indicator(to_number, phone_number_id, is_typing=True)
-        initial_wait = min(1.5 + len(message_bubbles) * 1.0, 6.0)
-        time.sleep(random.uniform(initial_wait * 0.8, initial_wait * 1.2))
-
-        for bubble in message_bubbles:
-            payload = {"messaging_product": "whatsapp", "to": to_number, "type": "text", "text": {"body": bubble}}
-            self._send_request(payload, phone_number_id)
-            time.sleep(random.uniform(1.5, 3.0))
+    def send_humanized_text_message(self, recipient_id, text, phone_number_id):
+        """
+        Envia uma mensagem de texto simulando o comportamento humano.
+        A SUA LÓGICA FOI IMPLEMENTADA AQUI.
+        """
+        messages = text.split('\n')
         
-        self._toggle_typing_indicator(to_number, phone_number_id, is_typing=False)
+        # Simula o "digitando..." por um tempo proporcional ao tamanho da resposta.
+        typing_duration = min(2 + len(messages) * 1.5, 8) # Duração entre 3.5s e 8s
+        self.send_typing_indicator(recipient_id, phone_number_id)
+        time.sleep(typing_duration)
+        self.send_typing_indicator(recipient_id, phone_number_id, stop=True)
 
-    def mark_message_as_read(self, message_id: str, phone_number_id: str):
-        payload = {"messaging_product": "whatsapp", "status": "read", "message_id": message_id}
-        self._send_request(payload, phone_number_id)
+        for i, msg in enumerate(messages):
+            if not msg.strip(): continue
+            
+            data = {
+                "messaging_product": "whatsapp",
+                "recipient_type": "individual",
+                "to": recipient_id,
+                "type": "text",
+                "text": {"preview_url": False, "body": msg.strip()},
+            }
+            if self.send_request("POST", f"{phone_number_id}/messages", data):
+                logger.info(f"Bolha de mensagem enviada com sucesso para {recipient_id}.")
+            else:
+                logger.error(f"Falha ao enviar bolha de mensagem para {recipient_id}.")
+                break 
+
+            # Pausa entre as bolhas, exceto na última.
+            if i < len(messages) - 1:
+                pause_duration = random.uniform(1.5, 3.0) # Pausa natural entre 1.5s e 3s
+                time.sleep(pause_duration)
 
 whatsapp_api = WhatsAppAPI()
