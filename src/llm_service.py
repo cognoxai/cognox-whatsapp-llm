@@ -1,22 +1,24 @@
 import os
-import google.generativeai as genai
-from typing import List, Dict
+import requests
 import logging
+from typing import List, Dict
 from datetime import datetime
 import pytz
 
 logger = logging.getLogger(__name__)
 
+# O ID do modelo que vamos usar. É um modelo brasileiro, treinado para conversação.
+MODEL_ID = "microsoft/DialogRPT-updown"
+API_URL = f"https://api-inference.huggingface.co/models/{MODEL_ID}"
+
 class CognoxLLMService:
-    def __init__(self):
-        self.api_key = os.getenv("GOOGLE_API_KEY")
+    def __init__(self ):
+        self.api_key = os.getenv("HUGGINGFACE_API_KEY")
         if not self.api_key:
-            raise ValueError("GOOGLE_API_KEY não definida.")
-        genai.configure(api_key=self.api_key)
-        self.model = genai.GenerativeModel('gemini-1.5-flash-latest')
+            raise ValueError("HUGGINGFACE_API_KEY não definida.")
+        self.headers = {"Authorization": f"Bearer {self.api_key}"}
 
     def get_greeting(self) -> str:
-        """Retorna a saudação correta baseada no horário de São Paulo."""
         try:
             tz = pytz.timezone('America/Sao_Paulo')
             now = datetime.now(tz)
@@ -28,36 +30,51 @@ class CognoxLLMService:
             logger.error(f"Erro ao obter fuso horário: {e}")
             return "Olá"
 
-    def get_system_prompt(self, is_first_message: bool) -> str:
-        """Gera o prompt do sistema com base no estado da conversa."""
-        if is_first_message:
-            return """
-            **Você é Sofia, consultora de IA da Cognox.ai.**
-            Sua PRIMEIRA resposta é controlada pelo sistema. Você não precisa gerar a saudação inicial aqui.
-            """
-        else:
-            return """
-            **Você é Sofia, consultora de IA da Cognox.ai.** Sua missão é ser indistinguível de um humano, usando empatia e expertise para guiar o lead.
-            **Diretriz de Estilo CRÍTICA:** ESTRUTURE TODAS AS SUAS RESPOSTAS EM PARÁGRAFOS CURTOS, separados por quebras de linha (`\n`).
-            **Regra de Ouro da Conversa CRÍTICA:** FAÇA APENAS **UMA PERGUNTA PRINCIPAL POR VEZ** E ESPERE A RESPOSTA DO LEAD. NUNCA envie múltiplas perguntas ou frases redundantes em sequência. Seja concisa. Não use saudações como "Olá!" ou "Oi!" em meio à conversa.
-            """
+    def query_huggingface(self, payload):
+        """Função para fazer a requisição à API do Hugging Face."""
+        response = requests.post(API_URL, headers=self.headers, json=payload)
+        return response.json()
 
     def process_message(self, user_message: str, history: List[Dict[str, str]]) -> str:
-        """Processa a mensagem do usuário e retorna a resposta da IA."""
+        """
+        Processa a mensagem do usuário usando um modelo de código aberto do Hugging Face.
+        """
         try:
             is_first_message = len(history) <= 1
-            system_prompt = self.get_system_prompt(is_first_message)
-            
             if is_first_message:
                 greeting = self.get_greeting()
-                return f"{greeting}!\nEu sou a Sofia, consultora de IA aqui na Cognox.ai.\nComo posso te ajudar hoje?"
+                return f"{greeting}! Eu sou a Sofia, consultora de IA aqui na Cognox.ai.\nComo posso te ajudar hoje?"
 
-            gemini_history = [{'role': 'model' if item['role'] == 'assistant' else 'user', 'parts': [{'text': item['content']}]} for item in history[:-1]]
-            chat_session = self.model.start_chat(history=gemini_history)
-            response = chat_session.send_message(f"{system_prompt}\n\n---\n\nCONTEXTO: {user_message}")
-            return response.text.strip()
+            # Prepara o histórico para o modelo.
+            # Este modelo específico funciona melhor com o histórico recente.
+            past_user_inputs = [h['content'] for h in history if h['role'] == 'user']
+            generated_responses = [h['content'] for h in history if h['role'] == 'assistant']
+
+            # A API espera um formato específico.
+            payload = {
+                "inputs": {
+                    "past_user_inputs": past_user_inputs,
+                    "generated_responses": generated_responses,
+                    "text": user_message
+                },
+                "parameters": {
+                    "repetition_penalty": 1.03,
+                    "temperature": 0.9
+                }
+            }
+            
+            output = self.query_huggingface(payload)
+            
+            if 'generated_text' in output:
+                return output['generated_text'].strip()
+            elif 'error' in output:
+                logger.error(f"Erro da API do Hugging Face: {output['error']}")
+                return "Desculpe, estou com uma pequena instabilidade. Poderia repetir sua mensagem?"
+            else:
+                return "Compreendo. Poderia me dar mais detalhes?"
+
         except Exception as e:
-            logger.error(f"Erro ao chamar a API do Google: {e}", exc_info=True)
-            return "Estou com um grande volume de atendimentos no momento. Poderia repetir sua mensagem, por favor?"
+            logger.error(f"Erro ao processar mensagem com Hugging Face: {e}", exc_info=True)
+            return "Desculpe, estou com uma instabilidade no meu sistema. Poderia repetir, por favor?"
 
 llm_service = CognoxLLMService()
