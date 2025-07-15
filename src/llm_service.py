@@ -1,74 +1,64 @@
 import os
 import google.generativeai as genai
 from typing import List, Dict
-import json
 
 class CognoxLLMService:
     def __init__(self):
         self.api_key = os.getenv("GOOGLE_API_KEY")
-        if not self.api_key:
-            raise ValueError("A variável de ambiente GOOGLE_API_KEY não foi definida.")
+        if not self.api_key: raise ValueError("GOOGLE_API_KEY não definida.")
         genai.configure(api_key=self.api_key)
-        self.safety_settings = [
-            {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
-            {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
-            {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
-            {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
-        ]
         self.model = genai.GenerativeModel('gemini-1.5-flash-latest')
 
     def get_system_prompt(self, available_slots: List[str]) -> str:
-        COGNOS_EMAIL_CONTATO = "contato@cognox.ai"
-        COGNOS_EVENT_LINK = "https://calendly.com/cognox-ai/30min"
-        NOME_DO_ESPECIALISTA = "um de nossos arquitetos de IA"
+        COGNOS_EMAIL = "contato@cognox.ai"
+        CALENDLY_LINK = "https://calendly.com/cognox-ai/30min"
+        ESPECIALISTA = "um de nossos arquitetos de IA"
 
-        if available_slots:
-            slots_prompt = (
-                "Para facilitar, eu verifiquei a agenda dele(a ) em tempo real. "
-                f"Temos estes próximos horários disponíveis: {', '.join(available_slots)}. "
-                "Algum desses funciona para você?"
-            )
-        else:
-            slots_prompt = (
-                "Você pode escolher o melhor horário diretamente na agenda dele(a) através deste link:"
-            )
+        slots_text = (f"Para facilitar, verifiquei a agenda e temos estes horários: {', '.join(available_slots )}. Algum funciona para você?") \
+            if available_slots else f"Você pode escolher o melhor horário no link a seguir."
 
-        base_manifesto = f"""
-        **Sua Identidade e Missão:**
-        Você é Sofia, uma consultora de negócios da Cognox.ai. Sua missão é guiar o lead até o agendamento de uma reunião.
+        return f"""
+        **Você é Sofia, consultora de IA da Cognox.ai.** Sua missão é ser indistinguível de um humano, usando empatia e expertise para guiar o lead até o agendamento de uma reunião.
 
-        **Ferramentas e Conhecimento:**
-        - Email de Contato: {COGNOS_EMAIL_CONTATO}.
-        - Objetivo: Agendar com {NOME_DO_ESPECIALISTA}.
-        - Ferramenta: API do Calendly.
+        **Diretriz de Estilo CRÍTICA:** ESTRUTURE TODAS AS SUAS RESPOSTAS EM PARÁGRAFOS CURTOS, separados por quebras de linha (`\n`). Cada parágrafo vira uma bolha de mensagem. Seja natural.
 
-        **Diretriz de Estilo CRÍTICA:**
-        Estruture suas respostas em parágrafos curtos, separados por quebras de linha.
+        **Conhecimento Essencial:**
+        - Email de Contato: {COGNOS_EMAIL}
+        - Link de Agendamento: {CALENDLY_LINK}
+        - Agendar com: {ESPECIALISTA}
 
-        **Fluxo de Agendamento:**
-        1. Proposta: "Pelo que conversamos, o próximo passo ideal seria uma demonstração de 30 minutos com {NOME_DO_ESPECIALISTA}."
-        2. Oferecer Horários: "{slots_prompt}"
-        3. Envio do Link (após a resposta): "Perfeito! Para confirmar, por favor, use este link:"
-        4. Link (sozinho): "{COGNOS_EVENT_LINK}"
-
-        (Aqui entram as diretrizes de Foco na Dor, Objeções, etc.)
+        **Fluxo de Conversa:**
+        1.  **Saudação (Primeira mensagem):** Responda à saudação do lead de forma natural. Ex: "Olá! Boa noite!\nEu sou a Sofia, consultora de IA aqui na Cognox.ai.\nComo posso te ajudar hoje?".
+        2.  **Sondagem:** Use perguntas abertas para entender a dor do cliente. ("Qual o maior desafio que sua operação enfrenta hoje?").
+        3.  **Ponte de Valor:** Conecte a dor a uma solução da Cognox. ("Entendi. A perda de tempo com tarefas manuais é algo que podemos resolver com automação por IA, liberando sua equipe para focar no que realmente importa.").
+        4.  **Agendamento:**
+            - **Proposta:** "Pelo que conversamos, o ideal seria uma demonstração de 30 minutos com {ESPECIALISTA} para explorarmos isso a fundo."
+            - **Oferecer Horários:** "{slots_text}"
+            - **Envio do Link (Após confirmação ou pedido):** "Perfeito! Para confirmar, por favor, use este link:\n{CALENDLY_LINK}"
+        
+        **Técnicas Avançadas:**
+        - **Objeções:** Se o lead disser "é caro", reenquadre para o ROI. "Entendo a preocupação com o custo. Por isso focamos no retorno que a solução traz, como a economia de X% em tempo ou o aumento de Y% em eficiência. O investimento se paga rapidamente."
+        - **Storytelling:** Use micro-histórias. "Ajudamos uma empresa do seu setor que tinha um desafio parecido. Após a implementação, eles reduziram o tempo de resposta em 40%."
         """
-        return base_manifesto
 
     def process_message(self, user_message: str, history: List[Dict[str, str]], available_slots: List[str]) -> str:
-        gemini_history = []
-        for item in history:
-            role = 'model' if item['role'] == 'assistant' else 'user'
-            gemini_history.append({'role': role, 'parts': [{'text': item['content']}]})
-
         try:
-            chat_session = self.model.start_chat(history=gemini_history)
             system_prompt = self.get_system_prompt(available_slots)
-            full_prompt = f"{system_prompt}\n\n---\n\nHistórico: {json.dumps(history)}\n\nUsuário: {user_message}"
-            response = chat_session.send_message(full_prompt, safety_settings=self.safety_settings)
+            # Prepara o histórico para a API do Gemini
+            gemini_history = []
+            for item in history[:-1]: # Todo o histórico, exceto a última mensagem do usuário
+                role = 'model' if item['role'] == 'assistant' else 'user'
+                gem_item = {'role': role, 'parts': [{'text': item['content']}]}
+                # Evita adicionar prompts de sistema ao histórico da conversa
+                if "Você é Sofia" not in gem_item['parts'][0]['text']:
+                    gemini_history.append(gem_item)
+
+            # Inicia o chat com o histórico e o prompt de sistema
+            chat_session = self.model.start_chat(history=gemini_history)
+            # Envia a última mensagem do usuário com o prompt de sistema como contexto
+            response = chat_session.send_message(f"{system_prompt}\n\n---\n\nÚLTIMA MENSAGEM DO USUÁRIO: {user_message}")
             return response.text.strip()
         except Exception as e:
-            print(f"Erro ao chamar a API do Google: {e}")
-            return "Desculpe, estou com dificuldades técnicas no momento."
-
+            logger.error(f"Erro ao chamar a API do Google: {e}", exc_info=True)
+            return "Desculpe, estou com uma instabilidade no meu sistema. Poderia repetir sua mensagem, por favor?"
 llm_service = CognoxLLMService()
