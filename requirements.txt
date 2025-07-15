@@ -4,4 +4,4 @@ flask-sqlalchemy
 requests
 gunicorn
 google-generativeai
-calendly==0.4.0
+calendly==1.1.1
