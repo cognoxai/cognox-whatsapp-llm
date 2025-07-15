@@ -11,14 +11,12 @@ def create_app():
     app = Flask(__name__)
     CORS(app)
 
+    # A forma CORRETA e SIMPLES. Confiamos que o Render fornecerá a URL correta.
     database_url = os.environ.get("DATABASE_URL")
     if not database_url:
-        logging.critical("FATAL: A variável de ambiente DATABASE_URL não foi definida.")
-        raise ValueError("DATABASE_URL não está configurada.")
+        raise ValueError("FATAL: DATABASE_URL não está configurada. Verifique se o banco de dados está linkado ao serviço no dashboard do Render.")
     
-    if database_url.startswith("postgres://"):
-        database_url = database_url.replace("postgres://", "postgresql://", 1)
-
+    # O SQLAlchemy moderno lida com "postgres://" vs "postgresql://". Removemos a lógica de replace.
     app.config["SQLALCHEMY_DATABASE_URI"] = database_url
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"pool_pre_ping": True}
