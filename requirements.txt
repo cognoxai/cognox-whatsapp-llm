@@ -5,3 +5,4 @@ requests
 gunicorn
 google-generativeai
 calendly==1.1.1
+psycopg2-binary
