@@ -35,7 +35,10 @@ def process_message_in_context(data):
 
             history = [{"role": msg.message_type, "content": msg.content} for msg in conversation.messages]
             
-            ai_response = llm_service.process_message(msg_body, history)
+            # --- A CORREÇÃO ESTÁ AQUI ---
+            # Mesmo na versão estável, a função `process_message` espera o argumento `available_slots`.
+            # Vamos passar uma lista vazia, já que desativamos a lógica do Calendly.
+            ai_response = llm_service.process_message(msg_body, history, available_slots=[])
             
             ai_message = Message(conversation_id=conversation.id, message_type="assistant", content=ai_response)
             db.session.add(ai_message)
@@ -50,8 +53,6 @@ def process_message_in_context(data):
 def handle_webhook():
     data = request.get_json()
     try:
-        # --- A CORREÇÃO ESTÁ AQUI ---
-        # Verificação de segurança para garantir que a estrutura do JSON é a esperada.
         if (data and "object" in data and data.get("object") == "whatsapp_business_account" and
                 "entry" in data and data["entry"] and
                 "changes" in data["entry"][0] and data["entry"][0]["changes"] and
@@ -62,7 +63,6 @@ def handle_webhook():
             
             process_message_in_context(data)
         else:
-            # Loga o payload se ele não for do tipo esperado, para depuração.
             logger.info(f"Webhook recebido, mas não é uma mensagem de texto do usuário: {json.dumps(data)}")
 
     except (KeyError, IndexError) as e:
